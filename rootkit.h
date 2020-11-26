@@ -1,0 +1,1 @@
+#define PROCFILE_NAME "rootkit"
