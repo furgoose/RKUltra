@@ -7,3 +7,24 @@
   ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
+
+#define SET_FOP(op, file_path, new, old)                \
+  do                                                    \
+  {                                                     \
+    struct inode *inode;                                \
+    struct path path;                                   \
+    if (kern_path(file_path, 0, &path))                 \
+      return -1;                                        \
+    inode = path.dentry->d_inode;                       \
+    old = inode->i_fop->op;                             \
+    disable_write_protect();                            \
+    ((struct file_operations *)inode->i_fop)->op = new; \
+    enable_write_protect();                             \
+  } while (0)
+
+#define UNSET_FOP(op, file_path, new)  \
+  do                                   \
+  {                                    \
+    void *null;                        \
+    SET_FOP(op, file_path, new, null); \
+  } while (0)
