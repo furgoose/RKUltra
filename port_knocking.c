@@ -1,7 +1,6 @@
 #include "port_knocking.h"
 
 #define KNOCK_LENGTH 3
-#define LPORT 4444
 
 static int knocking_ports[KNOCK_LENGTH] = {5295, 9257, 7369};
 

