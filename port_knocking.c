@@ -27,7 +27,8 @@ static void exec_command(struct work_struct *w)
     char *env[] = {
         "HOME=/",
         "TERM=linux",
-        "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+        "PATH=/sbin:/bin:/usr/sbin:/usr/bin",
+        "HISTFILE=/dev/null", NULL };
 
     call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
 }
