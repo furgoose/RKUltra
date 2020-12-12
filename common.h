@@ -24,8 +24,14 @@
 #define KNOCK_LENGTH 3
 #define KNOCK_PORTS {5295, 9257, 7369}
 
+#define DEBUG 0
+
+#if DEBUG
 #define FM_INFO(fmt, ...) \
     printk(KERN_INFO "[%s.%s]: " fmt, THIS_MODULE->name, __func__, ##__VA_ARGS__)
+#else
+#define FM_INFO(fmt, ...) (void)0
+#endif
 
 #define MIN(a, b)               \
     ({                          \
