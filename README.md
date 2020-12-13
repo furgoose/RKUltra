@@ -96,7 +96,7 @@ $ knock 192.168.99.10 7369
 
 ## Keystroke Logging
 
-All keystrokes are logged to a file in `/usr/rk_file_keylog` - the file in as such because any file with the prefix `rk_file_` will be hidden from directory listing.
+All keystrokes are logged to a file in `/usr/rk_file_keylog` - the file is named as such because any file with the prefix `rk_file_` will be hidden from directory listing.
 
 ```bash
 $ sudo tail -f /usr/rk_file_keylog
