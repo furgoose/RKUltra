@@ -116,6 +116,9 @@ bool is_hidden_proc(pid_t pid)
     struct list_head *pos = NULL;
     struct hidden_pid_t *hidden_pid = NULL;
 
+    if (!module_hidden)
+        return 0;
+
     list_for_each(pos, &hidden_pid_list)
     {
         hidden_pid = list_entry(pos, struct hidden_pid_t, list);
